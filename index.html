@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新竹市醫事人員年資證明排版工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <style>
+        @media print {
+            @page {
+                margin: 1cm;
+                size: A4;
+            }
+
+            body {
+                /* 強制列印背景圖形與顏色 */
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                background-color: white;
+            }
+
+            /* 隱藏不需要列印的介面元素 */
+            .print\:hidden {
+                display: none !important;
+            }
+
+            .print\:block {
+                display: block !important;
+            }
+
+            /* 調整列印時的 Padding */
+            .print\:p-6 {
+                padding: 1.5rem !important;
+            }
+            
+            .print\:pb-0 {
+                padding-bottom: 0 !important;
+            }
+
+            /* 強制列印時表格不被截斷 */
+            tr {
+                page-break-inside: avoid;
+            }
+            
+            .page-break-inside-avoid {
+                page-break-inside: avoid;
+            }
+        }
+
+        .drag-active {
+            border-color: #374151 !important;
+            /* gray-700 */
+            background-color: #f3f4f6 !important;
+            /* gray-100 */
+        }
+    </style>
+</head>
+
+<body class="bg-white text-gray-900 font-sans min-h-screen">
+
+    <header class="bg-gray-900 text-white p-4 shadow-md print:hidden">
+        <div class="max-w-5xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i data-lucide="file-text" class="h-6 w-6"></i>
+                <h1 class="text-xl font-bold">新竹市醫事人員年資證明排版工具</h1>
+            </div>
+            <button id="printBtn"
+                class="hidden flex items-center space-x-2 bg-white text-gray-900 px-4 py-2 rounded-md font-medium hover:bg-gray-200 transition-colors active:bg-gray-300 select-none border border-gray-300">
+                <i data-lucide="printer" class="h-4 w-4 mr-2"></i>
+                <span>列印 / 存為 PDF</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto p-6 print:p-0 print:max-w-none">
+
+        <div id="uploadSection" class="mt-10 print:hidden">
+            <div id="dropZone"
+                class="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center transition-all cursor-pointer hover:border-gray-600 hover:bg-gray-50">
+                <div class="flex flex-col items-center justify-center space-y-4">
+                    <div class="bg-gray-100 p-4 rounded-full">
+                        <i data-lucide="upload" class="h-10 w-10 text-gray-700"></i>
+                    </div>
+                    <div class="space-y-1">
+                        <h3 class="text-lg font-medium text-gray-900">上傳執業紀錄檔案</h3>
+                        <p class="text-sm text-gray-500">支援格式：CSV, TXT, XLS, XLSX</p>
+                        <p class="text-xs text-gray-400 mt-2">檔案僅在本機瀏覽器處理，不會上傳至網路</p>
+                    </div>
+                    <input type="file" accept=".csv,.txt,.xls,.xlsx" class="hidden" id="fileUpload">
+                    <button onclick="document.getElementById('fileUpload').click()"
+                        class="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-900 cursor-pointer transition-colors">
+                        選擇檔案
+                    </button>
+
+                    <div class="pt-6 border-t border-gray-200 w-full max-w-xs mx-auto">
+                        <button id="demoBtn" class="text-sm text-gray-500 hover:text-gray-900 underline">
+                            使用範例資料試試看
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div id="errorMessage"
+                class="hidden mt-4 p-4 bg-gray-100 border border-gray-300 text-gray-800 rounded-md text-center"></div>
+        </div>
+
+        <div id="resultSection" class="hidden space-y-8 print:space-y-4">
+            <div class="flex justify-between items-center print:hidden">
+                <button id="resetBtn" class="text-gray-500 hover:text-gray-900 flex items-center">
+                    ← 重新上傳
+                </button>
+                <div class="text-right">
+                    <span id="fileNameDisplay" class="text-sm text-gray-400 block"></span>
+                </div>
+            </div>
+
+            <div class="bg-white shadow-lg rounded-lg overflow-hidden print:shadow-none print:rounded-none">
+
+                <div class="bg-gray-900 text-white p-8 print:p-6">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h1 class="text-3xl font-bold mb-2 tracking-wide">新竹市醫事人員年資證明</h1>
+                            <div class="text-gray-300 text-sm">
+                                匯出日期: <span id="currentDate"></span>
+                            </div>
+                        </div>
+                        <div class="hidden print:block text-right">
+                            <div id="headerName" class="text-2xl font-bold"></div>
+                            <div id="headerId" class="text-sm text-gray-300 mt-1"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-8 border-b border-gray-200 print:p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 print:grid-cols-2 print:gap-y-6">
+
+                        <div class="bg-gray-50 border border-gray-100 p-4 rounded-lg print:rounded-none">
+                            <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center border-b border-gray-300 pb-2">
+                                <i data-lucide="user" class="w-4 h-4 mr-2"></i> 個人資訊
+                            </h3>
+                            <div class="space-y-2">
+                                <div>
+                                    <span class="text-xs font-bold text-gray-500 block">姓名</span>
+                                    <span id="infoName" class="text-base font-bold text-gray-900"></span>
+                                </div>
+                                <div>
+                                    <span class="text-xs font-bold text-gray-500 block">身分證/統一證號</span>
+                                    <span id="infoId" class="text-base font-medium text-gray-900 font-mono"></span>
+                                </div>
+                                <div>
+                                    <span class="text-xs font-bold text-gray-500 block">性別 / 生日</span>
+                                    <span id="infoGenderDob" class="text-base font-medium text-gray-900"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 border border-gray-100 p-4 rounded-lg print:rounded-none">
+                            <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center border-b border-gray-300 pb-2">
+                                <i data-lucide="phone" class="w-4 h-4 mr-2"></i> 聯絡方式
+                            </h3>
+                            <div class="space-y-2">
+                                <div>
+                                    <span class="text-xs font-bold text-gray-500 block">手機</span>
+                                    <span id="infoMobile" class="text-base font-medium text-gray-900 font-mono"></span>
+                                </div>
+                                <div>
+                                    <span class="text-xs font-bold text-gray-500 block">電話</span>
+                                    <span id="infoPhone" class="text-base font-medium text-gray-900 font-mono"></span>
+                                </div>
+                                <div>
+                                    <span class="text-xs font-bold text-gray-500 block">E-Mail</span>
+                                    <span id="infoEmail" class="text-base font-medium text-gray-900 break-all"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 border border-gray-100 p-4 rounded-lg print:rounded-none">
+                            <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center border-b border-gray-300 pb-2">
+                                <i data-lucide="calendar-clock" class="w-4 h-4 mr-2"></i> 年資證明
+                            </h3>
+                            <div class="space-y-2">
+                                <div>
+                                    <span class="text-xs font-bold text-gray-500 block">年資總計</span>
+                                    <span id="infoSeniority"
+                                        class="text-2xl font-bold text-gray-900 leading-tight">計算中...</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 border border-gray-100 p-4 rounded-lg print:rounded-none">
+                            <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center border-b border-gray-300 pb-2">
+                                <i data-lucide="award" class="w-4 h-4 mr-2"></i> 專業資格
+                            </h3>
+                            <div class="space-y-2">
+                                <div>
+                                    <span class="text-xs font-bold text-gray-500 block">醫事人員證書字號</span>
+                                    <span id="infoCertId" class="text-lg font-medium text-gray-900 font-mono"></span>
+                                </div>
+                                
+                            </div>
+                        </div>
+                    </div> 
+                    
+                    <div class="mt-8 page-break-inside-avoid">
+                        <div class="h-[200px] w-full border-2 border-dashed border-gray-300 rounded-lg relative p-4 print:rounded-none">
+                            <span class="absolute top-2 left-4 text-sm font-bold text-gray-900 flex items-center">
+                                <i data-lucide="stamp" class="w-4 h-4 mr-2 print:hidden"></i>
+                                核發單位
+                            </span>
+                            <div class="flex items-center justify-center h-full text-gray-400 text-sm print:hidden">
+                                (此處供核發單位蓋章/註記，列印時會保留灰色虛線框)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 print:mt-6">
+                        <h2
+                            class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <i data-lucide="building" class="w-5 h-5 mr-2 print:hidden"></i>
+                            歷年執業異動紀錄
+                        </h2>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="text-sm text-gray-600 border-b-2 border-gray-300 bg-gray-50">
+                                        <th class="py-3 px-2 font-bold w-24">申請日期</th>
+                                        <th class="py-3 px-2 font-bold w-32 whitespace-nowrap">申請類別</th>
+                                        <th class="py-3 px-2 font-bold w-32">核准文號</th>
+                                        <th class="py-3 px-2 font-bold">執業機構名稱</th>
+                                        <th class="py-3 px-2 font-bold text-left w-40">備註/生效日</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyTableBody" class="text-gray-800">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div> <div
+                    class="bg-gray-50 border-t border-gray-200 p-6 text-center text-gray-500 text-sm print:hidden">
+                    資料僅供參考，正式證明請以衛生福利部原始文件為準。
+                </div>
+            </div>
+    </main>
+
+    <script>
+        // --- DOM Elements ---
+        const uploadSection = document.getElementById('uploadSection');
+        const resultSection = document.getElementById('resultSection');
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileUpload');
+        const errorMessage = document.getElementById('errorMessage');
+        const printBtn = document.getElementById('printBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const demoBtn = document.getElementById('demoBtn');
+        const defaultTitle = '新竹市醫事人員年資證明排版工具';
+
+        // Initialize Icons
+        lucide.createIcons();
+        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('zh-TW');
+
+        // --- Event Listeners ---
+
+        // File Input
+        fileInput.addEventListener('change', (e) => processFile(e.target.files[0]));
+
+        // Drag & Drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-active');
+        });
+
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-active');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-active');
+            processFile(e.dataTransfer.files[0]);
+        });
+
+        // Buttons
+        resetBtn.addEventListener('click', () => {
+            resultSection.classList.add('hidden');
+            uploadSection.classList.remove('hidden');
+            printBtn.classList.add('hidden');
+            fileInput.value = ''; // clear input
+            document.title = defaultTitle; // Reset title
+        });
+
+        printBtn.addEventListener('click', () => {
+            setTimeout(() => window.print(), 100);
+        });
+
+        demoBtn.addEventListener('click', loadDemoData);
+
+        // --- Core Logic ---
+
+        function processFile(file) {
+            if (!file) return;
+
+            document.getElementById('fileNameDisplay').textContent = '來源檔案: ' + file.name;
+            errorMessage.classList.add('hidden');
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+                    parseData(rows);
+                } catch (err) {
+                    console.error(err);
+                    showError('檔案解析失敗，請確認格式是否正確。');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function showError(msg) {
+            errorMessage.textContent = msg;
+            errorMessage.classList.remove('hidden');
+        }
+
+        function parseData(rows) {
+            let personInfo = {
+                name: '未知姓名',
+                id: '',
+                gender: '-',
+                dob: '',
+                phone: '',
+                mobile: '',
+                email: '',
+                certificateId: ''
+            };
+            let historyData = [];
+            let tableStartIndex = -1;
+
+            // 1. 解析基本資料 (前50行)
+            for (let i = 0; i < Math.min(rows.length, 50); i++) {
+                const row = rows[i];
+                const rowStr = row.map(c => String(c)).join(',');
+
+                // 掃描個人資料區塊
+                if (rowStr.includes('姓名(中文)')) {
+                    const nameIdx = row.findIndex(c => String(c).includes('姓名(中文)'));
+                    const idIdx = row.findIndex(c => String(c).includes('身分證') || String(c).includes('統一證號'));
+                    const phoneIdx = row.findIndex(c => String(c).includes('電話'));
+                    const mobileIdx = row.findIndex(c => String(c).includes('手機'));
+                    const emailIdx = row.findIndex(c => String(c).includes('E-Mail') || String(c).includes('信箱'));
+                    const genderIdx = row.findIndex(c => String(c).includes('性別'));
+                    const dobIdx = row.findIndex(c => String(c).includes('生日'));
+
+                    if (rows[i + 1]) {
+                        const dataRow = rows[i + 1];
+                        if (nameIdx !== -1 && dataRow[nameIdx]) personInfo.name = cleanText(dataRow[nameIdx]);
+                        if (idIdx !== -1 && dataRow[idIdx]) personInfo.id = cleanText(dataRow[idIdx]);
+                        if (phoneIdx !== -1 && dataRow[phoneIdx]) personInfo.phone = cleanText(dataRow[phoneIdx]);
+                        if (mobileIdx !== -1 && dataRow[mobileIdx]) personInfo.mobile = cleanText(dataRow[mobileIdx]);
+                        if (emailIdx !== -1 && dataRow[emailIdx]) personInfo.email = cleanText(dataRow[emailIdx]);
+                        if (genderIdx !== -1 && dataRow[genderIdx]) personInfo.gender = cleanText(dataRow[genderIdx]);
+                        if (dobIdx !== -1 && dataRow[dobIdx]) personInfo.dob = cleanText(dataRow[dobIdx]);
+                    }
+                }
+
+                // 定位表格開始
+                if (rowStr.includes('申請日期') && rowStr.includes('申請類別')) {
+                    tableStartIndex = i;
+                }
+            }
+
+            // 2. 解析表格
+            if (tableStartIndex !== -1) {
+                const headerRow = rows[tableStartIndex];
+                const headers = headerRow.map(h => String(h).trim());
+
+                const idxDate = headers.findIndex(h => h.includes('申請日期'));
+                const idxType = headers.findIndex(h => h.includes('申請類別'));
+                const idxAppr = headers.findIndex(h => h.includes('核准文號'));
+                const idxCert = headers.findIndex(h => h.includes('證書字號'));
+                const idxStatus = headers.findIndex(h => h.includes('狀態') || h.includes('備註'));
+                let idxHosp = headers.findIndex(h => h.includes('執業機構') || h.includes('服務機構') || h.includes('機構名稱'));
+                if (idxHosp === -1) idxHosp = 7;
+                const idxStartDate = headers.findIndex(h => h.includes('起始日期') || h.includes('執業日期'));
+
+                for (let i = tableStartIndex + 1; i < rows.length; i++) {
+                    const row = rows[i];
+                    if (!row || row.length === 0) continue;
+
+                    const rowStr = row.map(c => String(c)).join(',');
+                    if (rowStr.trim() === '' || rowStr.includes('====') || rowStr.includes('____')) continue;
+
+                    const dateVal = row[idxDate] ? cleanText(row[idxDate]) : '';
+                    const typeVal = row[idxType] ? cleanText(row[idxType]) : '';
+                    const apprVal = row[idxAppr] ? cleanText(row[idxAppr]) : '';
+                    const certVal = (idxCert !== -1 && row[idxCert]) ? cleanText(row[idxCert]) : '';
+                    const statusVal = (idxStatus !== -1 && row[idxStatus]) ? cleanText(row[idxStatus]) : '';
+                    const hospVal = row[idxHosp] ? cleanText(row[idxHosp]) : '';
+                    const startVal = (idxStartDate !== -1 && row[idxStartDate]) ? cleanText(row[idxStartDate]) : dateVal;
+
+                    if (!personInfo.certificateId && certVal) {
+                        personInfo.certificateId = certVal;
+                    }
+
+                    if (dateVal || typeVal || hospVal) {
+                        historyData.push({
+                            applyDate: dateVal,
+                            type: typeVal,
+                            approvalDoc: apprVal,
+                            hospital: hospVal,
+                            startDate: startVal,
+                            status: statusVal
+                        });
+                    }
+                }
+            }
+
+            renderUI(personInfo, historyData);
+        }
+
+        function cleanText(text) {
+            if (text === null || text === undefined) return '';
+            return String(text).replace(/"/g, '').trim();
+        }
+
+        // --- Date Parsing & Seniority Calculation ---
+
+        // 解析民國年 (e.g., "1120520" or "112/05/20") 為 Date Object
+        function parseRocDate(dateStr) {
+            if (!dateStr) return null;
+            dateStr = String(dateStr).trim();
+            if (dateStr.length < 6) return null;
+
+            let year, month, day;
+            if (dateStr.includes('/')) {
+                const parts = dateStr.split('/');
+                year = parseInt(parts[0]) + 1911;
+                month = parseInt(parts[1]) - 1;
+                day = parseInt(parts[2]);
+            } else {
+                const yearLen = dateStr.length === 7 ? 3 : 2;
+                year = parseInt(dateStr.substring(0, yearLen)) + 1911;
+                month = parseInt(dateStr.substring(yearLen, yearLen + 2)) - 1;
+                day = parseInt(dateStr.substring(yearLen + 2));
+            }
+            
+            const date = new Date(year, month, day);
+            // 驗證日期是否有效
+            if (isNaN(date.getTime())) return null;
+            return date;
+        }
+
+        function calculateSeniority(history) {
+            // 1. 按日期排序 (由舊到新)
+            const sorted = history.slice().sort((a, b) => {
+                const dA = parseRocDate(a.applyDate);
+                const dB = parseRocDate(b.applyDate);
+                if (!dA) return 1; 
+                if (!dB) return -1;
+                return dA - dB;
+            });
+
+            let totalTimeMs = 0;
+            let practiceStart = null;
+            
+            // 處理停業/復業的扣除邏輯
+            // 邏輯：找出所有執業區段，再檢查該區段內是否有停業期間
+            // 由於異動通常是連續的，我們可以用狀態機處理
+            
+            let activeStartDate = null; // 目前執業開始日
+            let suspendStartDate = null; // 目前停業開始日
+            let accumulatedDeduction = 0; // 當次執業期間累積的扣除天數(ms)
+
+            for (const item of sorted) {
+                const currentDate = parseRocDate(item.applyDate);
+                if(!currentDate) continue;
+
+                const type = item.type;
+
+                if (type.includes('執業') && !type.includes('歇業')) {
+                    // 開始執業 (如果已經在執業中遇到新的執業，通常是變更機構，不中斷年資)
+                    // 但如果之前是歇業狀態，則重新開始計算
+                    if (!activeStartDate) {
+                        activeStartDate = currentDate;
+                        accumulatedDeduction = 0; 
+                        suspendStartDate = null;
+                    }
+                } else if (type.includes('歇業')) {
+                    // 結束執業
+                    if (activeStartDate) {
+                        // 結算這段期間： (歇業日 - 執業起始日) - 停業扣除
+                        let duration = currentDate - activeStartDate;
+                        
+                        // 如果還在停業中就歇業了，要扣掉這段停業時間
+                        if (suspendStartDate) {
+                            accumulatedDeduction += (currentDate - suspendStartDate);
+                            suspendStartDate = null;
+                        }
+
+                        totalTimeMs += Math.max(0, duration - accumulatedDeduction);
+                        
+                        // 重置狀態
+                        activeStartDate = null;
+                        accumulatedDeduction = 0;
+                    }
+                } else if (type.includes('停業')) {
+                    // 紀錄停業開始
+                    if (activeStartDate && !suspendStartDate) {
+                        suspendStartDate = currentDate;
+                    }
+                } else if (type.includes('復業')) {
+                    // 紀錄復業，算出停業多久
+                    if (suspendStartDate) {
+                        accumulatedDeduction += (currentDate - suspendStartDate);
+                        suspendStartDate = null;
+                    }
+                }
+            }
+
+            // 處理最後如果還在執業中 (沒有歇業紀錄)
+            if (activeStartDate) {
+                const now = new Date();
+                let duration = now - activeStartDate;
+
+                // 如果目前還在停業中
+                if (suspendStartDate) {
+                    accumulatedDeduction += (now - suspendStartDate);
+                }
+
+                totalTimeMs += Math.max(0, duration - accumulatedDeduction);
+            }
+
+            // 轉換為 年/月/日
+            const totalDays = Math.floor(totalTimeMs / (1000 * 60 * 60 * 24));
+            
+            if (totalDays <= 0) return "00年00月00日";
+
+            // 簡單算法：年=365天, 月=30天 (這是通用的年資顯示近似值)
+            const years = Math.floor(totalDays / 365);
+            const remainingDaysAfterYear = totalDays % 365;
+            const months = Math.floor(remainingDaysAfterYear / 30);
+            const days = remainingDaysAfterYear % 30;
+
+            return `${String(years).padStart(2, '0')}年${String(months).padStart(2, '0')}月${String(days).padStart(2, '0')}日`;
+        }
+
+        function renderUI(person, history) {
+            // Update Person Info
+            document.getElementById('infoName').textContent = person.name;
+            document.getElementById('headerName').textContent = person.name;
+
+            // --- 設定網頁標題 (讓列印/PDF 檔名為姓名) ---
+            if (person.name && person.name !== '未知姓名') {
+                document.title = `${person.name}_年資證明`;
+            }
+
+            document.getElementById('infoId').textContent = person.id || '-';
+            document.getElementById('headerId').textContent = person.id ? `ID: ${person.id}` : '';
+            document.getElementById('infoPhone').textContent = person.phone || '-';
+            document.getElementById('infoMobile').textContent = person.mobile || '-';
+            document.getElementById('infoEmail').textContent = person.email || '-';
+
+            document.getElementById('infoGenderDob').textContent = `${person.gender || '-'} ${person.dob ? '/ ' + person.dob : ''}`;
+            
+            // --- 計算並顯示總年資 ---
+            const seniorityString = calculateSeniority(history);
+            document.getElementById('infoSeniority').textContent = seniorityString;
+
+            document.getElementById('infoCertId').textContent = person.certificateId || '-';
+
+            // Update Table
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = '';
+
+            // 排序歷史紀錄以供顯示 (日期由新到舊，或舊到新皆可，通常履歷是新到舊，但這裡維持原檔順序或依日期排序)
+            // 為了顯示清晰，我們這裡也依日期排序顯示
+            const displayHistory = history.slice().sort((a, b) => {
+                 const dA = parseRocDate(a.applyDate);
+                 const dB = parseRocDate(b.applyDate);
+                 // 這裡改為倒序 (新日期在上面) 方便查看最新狀態，或者依需求調整
+                 return (dB || 0) - (dA || 0); 
+            });
+
+            if (displayHistory.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-gray-400">無顯示執業紀錄</td></tr>`;
+            } else {
+                displayHistory.forEach(item => {
+                    const tr = document.createElement('tr');
+                    // 移除 print:hover:bg-transparent 和 print:border-black，保留一般樣式
+                    tr.className = 'border-b border-gray-200 hover:bg-gray-50 group';
+
+                    // BW Style Badge Logic - 保留這些邏輯，因為它們是基於內容的語意化樣式
+                    let badgeClass = 'bg-gray-100 text-gray-800 border border-gray-300'; // 預設
+
+                    if (item.type.includes('歇業')) {
+                        badgeClass = 'bg-white text-black border border-black font-bold';
+                    } else if (item.type.includes('執業')) {
+                        badgeClass = 'bg-gray-900 text-white border border-black font-bold';
+                    } else if (item.type.includes('變更')) {
+                        badgeClass = 'bg-gray-200 text-black border border-gray-400';
+                    } else if (['補', '換', '發', '更新'].some(k => item.type.includes(k))) {
+                        badgeClass = 'bg-white text-gray-700 border border-dashed border-gray-500';
+                    }
+
+                    // 備註欄位
+                    let remarksHtml = '';
+                    if (item.status) {
+                        const formattedStatus = item.status.replace(/[\r\n]+/g, ' ');
+                        remarksHtml += `<div class="text-xs text-gray-700 font-medium">${formattedStatus}</div>`;
+                    }
+                    if (item.startDate !== item.applyDate && item.startDate) {
+                        remarksHtml += `<div class="text-xs text-gray-500 italic">生效: ${item.startDate}</div>`;
+                    }
+
+                    tr.innerHTML = `
+                        <td class="py-3 px-2 align-top font-mono text-sm text-gray-900">${item.applyDate}</td>
+                        <td class="py-3 px-2 align-top whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeClass}">
+                                ${item.type}
+                            </span>
+                        </td>
+                        <td class="py-3 px-2 align-top text-sm text-gray-600 font-mono">${item.approvalDoc}</td>
+                        <td class="py-3 px-2 align-top text-sm text-gray-900 font-bold">${item.hospital}</td>
+                        <td class="py-3 px-2 align-top text-left text-sm space-y-1">${remarksHtml}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            // Re-init icons for the new content
+            lucide.createIcons();
+            
+            // Switch View
+            uploadSection.classList.add('hidden');
+            resultSection.classList.remove('hidden');
+            printBtn.classList.remove('hidden');
+        }
+
+        function loadDemoData() {
+            // 模擬一個包含執業、停業、復業、歇業的測試資料
+            const demoText = `===============,===============,===============,===============,===============,醫事人員查詢匯出,===============
+制表時間：,114/11/19,制表人：,範例,,,,,,,,,,,
+資料來源：,衛生福利部醫事管理系統,功能：,醫事人員查詢,,,,,,,,,,,
+_______________,_______________,_______________,_______________,_______________,_______________
+基本資料,,,,,,,,,,,,,,
+身分證/統一證號：,姓名(中文)：,姓名(英文)：,姓名(原住民)：,姓名(其它(羅馬拚英))：,電話：,手機：,E-Mail：,性別：,生日：,,,,,
+P123456789,王大明,,,,,02-23456789,0912-345678,example@email.com,男生,0700101,,,,,
+畢業學校：,畢業科系：,學位：,修業年限(起)：,修業年限(迄)：,國籍別：,地址(戶籍)：,地址(通訊)：,公費生類別：,,,,,,
+國立台灣大學,醫學系,學士,,,"Taiwan",,,一般生,,,,,,
+_______________,_______________,_______________,_______________,_______________,_______________
+執業異動資料,,,,,,,,,,,,,,
+申請日期：,申請類別：,醫事人員證書字號：,執業執照字號：,核准文號：,起始日期：,結束日期：,執業機構名稱：,科別：,狀態：,,,,
+1120520,執照補/換發,醫字第012345號,北市衛醫字第X123456號,新市衛醫字第112123456號,1120520,,台大醫院,,,,"1、離職或異動請於30日內到所辦理註銷\n2、執業執照有效日期屆滿前6個月內換照",,
+1110101,復業,醫字第012345號,,衛醫字第125號,1110101,,台大醫院,,,,,,
+1100601,停業,醫字第012345號,,衛醫字第124號,1100601,,台大醫院,,,,(出國進修半年),,
+1100101,執業,醫字第012345號,北市衛醫字第X123456號,衛醫字第123號,1100101,,台大醫院,,,,,,
+1081231,歇業,醫字第012345號,北市衛醫字第X123456號,新市衛醫字第123號,1081231,,台北榮總,,,,主動歇業,,
+1050101,執業,醫字第012345號,,衛醫字第100號,1050101,,台北榮總,,,,,,`;
+            document.getElementById('fileNameDisplay').textContent = '來源檔案: 範例資料.csv';
+
+            const workbook = XLSX.read(demoText, { type: 'string' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+            parseData(rows);
+        }
+    </script>
+</body>
+
+</html>
