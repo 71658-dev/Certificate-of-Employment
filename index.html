@@ -461,15 +461,31 @@
         function calculateSeniority(history) {
             // 1. 按日期排序 (由舊到新)
             const sorted = history.slice().sort((a, b) => {
-                const dA = parseRocDate(a.applyDate);
-                const dB = parseRocDate(b.applyDate);
+                const dA = parseRocDate(a.startDate);
+                const dB = parseRocDate(b.startDate);
                 if (!dA) return 1; 
                 if (!dB) return -1;
-                return dA - dB;
+                const diff = dA - dB;
+                if (diff !== 0) return diff;
+
+                // 同一天發生的順序處理：
+                // 優先順序：復業 -> 歇業 -> 執業 -> 停業
+                // 這樣可以確保：
+                // 1. 復業在歇業前計算（完成一段停業）
+                // 2. 歇業在執業前計算（先關閉舊的再開啟新的）
+                // 3. 執業在停業前計算（先開始再停業）
+
+                const getWeight = (t) => {
+                    if (t.includes('復業')) return 1;
+                    if (t.includes('歇業')) return 2;
+                    if (t.includes('執業')) return 3;
+                    if (t.includes('停業')) return 4;
+                    return 5;
+                };
+                return getWeight(a.type) - getWeight(b.type);
             });
 
             let totalTimeMs = 0;
-            let practiceStart = null;
             
             // 處理停業/復業的扣除邏輯
             // 邏輯：找出所有執業區段，再檢查該區段內是否有停業期間
@@ -480,7 +496,7 @@
             let accumulatedDeduction = 0; // 當次執業期間累積的扣除天數(ms)
 
             for (const item of sorted) {
-                const currentDate = parseRocDate(item.applyDate);
+                const currentDate = parseRocDate(item.startDate);
                 if(!currentDate) continue;
 
                 const type = item.type;
