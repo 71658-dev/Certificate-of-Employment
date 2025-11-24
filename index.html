@@ -459,14 +459,8 @@
         }
 
         function calculateSeniority(history) {
-            // 1. 按日期排序 (由舊到新)
-            const sorted = history.slice().sort((a, b) => {
-                const dA = parseRocDate(a.applyDate);
-                const dB = parseRocDate(b.applyDate);
-                if (!dA) return 1; 
-                if (!dB) return -1;
-                return dA - dB;
-            });
+            // 1. 依照上傳資料順序
+            const sorted = history;
 
             let totalTimeMs = 0;
             let practiceStart = null;
@@ -580,14 +574,8 @@
             const tbody = document.getElementById('historyTableBody');
             tbody.innerHTML = '';
 
-            // 排序歷史紀錄以供顯示 (日期由新到舊，或舊到新皆可，通常履歷是新到舊，但這裡維持原檔順序或依日期排序)
-            // 為了顯示清晰，我們這裡也依日期排序顯示
-            const displayHistory = history.slice().sort((a, b) => {
-                 const dA = parseRocDate(a.applyDate);
-                 const dB = parseRocDate(b.applyDate);
-                 // 這裡改為倒序 (新日期在上面) 方便查看最新狀態，或者依需求調整
-                 return (dB || 0) - (dA || 0); 
-            });
+            // 依照上傳資料順序顯示
+            const displayHistory = history;
 
             if (displayHistory.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-gray-400">無顯示執業紀錄</td></tr>`;
