@@ -36,7 +36,7 @@
             .print\:p-6 {
                 padding: 1.5rem !important;
             }
-            
+
             .print\:pb-0 {
                 padding-bottom: 0 !important;
             }
@@ -45,7 +45,7 @@
             tr {
                 page-break-inside: avoid;
             }
-            
+
             .page-break-inside-avoid {
                 page-break-inside: avoid;
             }
@@ -138,7 +138,8 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 print:grid-cols-2 print:gap-y-6">
 
                         <div class="bg-gray-50 border border-gray-100 p-4 rounded-lg print:rounded-none">
-                            <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center border-b border-gray-300 pb-2">
+                            <h3
+                                class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center border-b border-gray-300 pb-2">
                                 <i data-lucide="user" class="w-4 h-4 mr-2"></i> 個人資訊
                             </h3>
                             <div class="space-y-2">
@@ -158,7 +159,8 @@
                         </div>
 
                         <div class="bg-gray-50 border border-gray-100 p-4 rounded-lg print:rounded-none">
-                            <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center border-b border-gray-300 pb-2">
+                            <h3
+                                class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center border-b border-gray-300 pb-2">
                                 <i data-lucide="phone" class="w-4 h-4 mr-2"></i> 聯絡方式
                             </h3>
                             <div class="space-y-2">
@@ -178,7 +180,8 @@
                         </div>
 
                         <div class="bg-gray-50 border border-gray-100 p-4 rounded-lg print:rounded-none">
-                            <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center border-b border-gray-300 pb-2">
+                            <h3
+                                class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center border-b border-gray-300 pb-2">
                                 <i data-lucide="calendar-clock" class="w-4 h-4 mr-2"></i> 年資證明
                             </h3>
                             <div class="space-y-2">
@@ -191,7 +194,8 @@
                         </div>
 
                         <div class="bg-gray-50 border border-gray-100 p-4 rounded-lg print:rounded-none">
-                            <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center border-b border-gray-300 pb-2">
+                            <h3
+                                class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center border-b border-gray-300 pb-2">
                                 <i data-lucide="award" class="w-4 h-4 mr-2"></i> 專業資格
                             </h3>
                             <div class="space-y-2">
@@ -199,13 +203,14 @@
                                     <span class="text-xs font-bold text-gray-500 block">醫事人員證書字號</span>
                                     <span id="infoCertId" class="text-lg font-medium text-gray-900 font-mono"></span>
                                 </div>
-                                
+
                             </div>
                         </div>
-                    </div> 
-                    
+                    </div>
+
                     <div class="mt-8 page-break-inside-avoid">
-                        <div class="h-[200px] w-full border-2 border-dashed border-gray-300 rounded-lg relative p-4 print:rounded-none">
+                        <div
+                            class="h-[200px] w-full border-2 border-dashed border-gray-300 rounded-lg relative p-4 print:rounded-none">
                             <span class="absolute top-2 left-4 text-sm font-bold text-gray-900 flex items-center">
                                 <i data-lucide="stamp" class="w-4 h-4 mr-2 print:hidden"></i>
                                 核發單位
@@ -217,8 +222,7 @@
                     </div>
 
                     <div class="mt-8 print:mt-6">
-                        <h2
-                            class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                             <i data-lucide="building" class="w-5 h-5 mr-2 print:hidden"></i>
                             歷年執業異動紀錄
                         </h2>
@@ -231,17 +235,18 @@
                                         <th class="py-3 px-2 font-bold w-32 whitespace-nowrap">申請類別</th>
                                         <th class="py-3 px-2 font-bold w-32">核准文號</th>
                                         <th class="py-3 px-2 font-bold">執業機構名稱</th>
-                                        <th class="py-3 px-2 font-bold text-left w-40">備註/生效日</th>
+                                        <th class="py-3 px-2 font-bold text-left w-40">備註</th>
+                                        <th class="py-3 px-2 font-bold w-32">累積年資</th>
                                     </tr>
                                 </thead>
                                 <tbody id="historyTableBody" class="text-gray-800">
-                                    </tbody>
+                                </tbody>
                             </table>
                         </div>
                     </div>
 
-                </div> <div
-                    class="bg-gray-50 border-t border-gray-200 p-6 text-center text-gray-500 text-sm print:hidden">
+                </div>
+                <div class="bg-gray-50 border-t border-gray-200 p-6 text-center text-gray-500 text-sm print:hidden">
                     資料僅供參考，正式證明請以衛生福利部原始文件為準。
                 </div>
             </div>
@@ -451,99 +456,131 @@
                 month = parseInt(dateStr.substring(yearLen, yearLen + 2)) - 1;
                 day = parseInt(dateStr.substring(yearLen + 2));
             }
-            
+
             const date = new Date(year, month, day);
             // 驗證日期是否有效
             if (isNaN(date.getTime())) return null;
             return date;
         }
 
-        function calculateSeniority(history) {
-            // 1. 依照上傳資料順序
-            const sorted = history;
+        function formatDuration(ms) {
+            if (ms <= 0) return "00年00月00日";
+            const totalDays = Math.floor(ms / (1000 * 60 * 60 * 24));
+            const years = Math.floor(totalDays / 365);
+            const remainingDaysAfterYear = totalDays % 365;
+            const months = Math.floor(remainingDaysAfterYear / 30);
+            const days = remainingDaysAfterYear % 30;
+            return `${String(years).padStart(2, '0')}年${String(months).padStart(2, '0')}月${String(days).padStart(2, '0')}日`;
+        }
+
+        function processHistory(history) {
+            // 1. 解析日期，但不排序，保留原始資料順序
+            // 遵照使用者指示，原始資料順序是正確的 (通常是新到舊)
+            let list = history.map(item => ({
+                ...item,
+                dateObj: parseRocDate(item.applyDate)
+            })).filter(item => item.dateObj !== null);
+
+            // 已移除排序邏輯
+            // sorted.sort((a, b) => a.dateObj - b.dateObj); 
 
             let totalTimeMs = 0;
-            let practiceStart = null;
-            
-            // 處理停業/復業的扣除邏輯
-            // 邏輯：找出所有執業區段，再檢查該區段內是否有停業期間
-            // 由於異動通常是連續的，我們可以用狀態機處理
-            
+
+            // 狀態變數
             let activeStartDate = null; // 目前執業開始日
             let suspendStartDate = null; // 目前停業開始日
             let accumulatedDeduction = 0; // 當次執業期間累積的扣除天數(ms)
 
-            for (const item of sorted) {
-                const currentDate = parseRocDate(item.applyDate);
-                if(!currentDate) continue;
-
+            // 假設資料為新到舊 (Newest -> Oldest)，為了正確計算時間軸，我們從列表底部 (最舊) 開始遍歷
+            // 因此採用倒序迴圈
+            for (let i = list.length - 1; i >= 0; i--) {
+                const item = list[i];
+                const currentDate = item.dateObj;
                 const type = item.type;
 
+                // 預設顯示值初始化
+                item.displayPeriod = null;
+                item.displayAccumulated = null;
+                item.displaySuspensionDuration = null; // 新增：顯示停業時間
+
                 if (type.includes('執業') && !type.includes('歇業')) {
-                    // 開始執業 (如果已經在執業中遇到新的執業，通常是變更機構，不中斷年資)
-                    // 但如果之前是歇業狀態，則重新開始計算
+                    // 開始執業
                     if (!activeStartDate) {
                         activeStartDate = currentDate;
-                        accumulatedDeduction = 0; 
+                        accumulatedDeduction = 0;
                         suspendStartDate = null;
                     }
                 } else if (type.includes('歇業')) {
                     // 結束執業
                     if (activeStartDate) {
-                        // 結算這段期間： (歇業日 - 執業起始日) - 停業扣除
+                        // 結算這段期間
                         let duration = currentDate - activeStartDate;
-                        
+
                         // 如果還在停業中就歇業了，要扣掉這段停業時間
                         if (suspendStartDate) {
                             accumulatedDeduction += (currentDate - suspendStartDate);
                             suspendStartDate = null;
                         }
 
-                        totalTimeMs += Math.max(0, duration - accumulatedDeduction);
-                        
+                        const realDuration = Math.max(0, duration - accumulatedDeduction);
+                        totalTimeMs += realDuration;
+
+                        // --- 紀錄顯示資訊 ---
+                        item.displayPeriod = formatDuration(realDuration);
+                        item.displayAccumulated = formatDuration(totalTimeMs);
+
                         // 重置狀態
                         activeStartDate = null;
                         accumulatedDeduction = 0;
                     }
                 } else if (type.includes('停業')) {
-                    // 紀錄停業開始
                     if (activeStartDate && !suspendStartDate) {
                         suspendStartDate = currentDate;
                     }
                 } else if (type.includes('復業')) {
-                    // 紀錄復業，算出停業多久
                     if (suspendStartDate) {
-                        accumulatedDeduction += (currentDate - suspendStartDate);
+                        // 計算此次停業時間
+                        const suspensionDuration = currentDate - suspendStartDate;
+                        accumulatedDeduction += suspensionDuration;
+
+                        // 紀錄停業時間供顯示
+                        item.displaySuspensionDuration = formatDuration(suspensionDuration);
+                        
                         suspendStartDate = null;
                     }
                 }
             }
 
-            // 處理最後如果還在執業中 (沒有歇業紀錄)
+            // 處理最後如果還在執業中 (計算到今天)
             if (activeStartDate) {
                 const now = new Date();
                 let duration = now - activeStartDate;
-
-                // 如果目前還在停業中
+                
+                let currentSegmentDeduction = accumulatedDeduction;
                 if (suspendStartDate) {
-                    accumulatedDeduction += (now - suspendStartDate);
+                    currentSegmentDeduction += (now - suspendStartDate);
                 }
+                
+                const realDuration = Math.max(0, duration - currentSegmentDeduction);
+                totalTimeMs += realDuration;
 
-                totalTimeMs += Math.max(0, duration - accumulatedDeduction);
+                // 寫入到列表的最上方一筆 (Newest)，因為 list 是保持原順序(Newest -> Oldest)，所以是 index 0
+                if (list.length > 0) {
+                    const lastItem = list[0]; 
+                    const isTermination = lastItem.type.includes('歇業');
+                    const isSuspension = lastItem.type.includes('停業');
+                    
+                    if (!isTermination && !isSuspension) {
+                        lastItem.displayPeriod = formatDuration(realDuration);
+                        lastItem.displayAccumulated = formatDuration(totalTimeMs);
+                    }
+                }
             }
 
-            // 轉換為 年/月/日
-            const totalDays = Math.floor(totalTimeMs / (1000 * 60 * 60 * 24));
-            
-            if (totalDays <= 0) return "00年00月00日";
-
-            // 簡單算法：年=365天, 月=30天 (這是通用的年資顯示近似值)
-            const years = Math.floor(totalDays / 365);
-            const remainingDaysAfterYear = totalDays % 365;
-            const months = Math.floor(remainingDaysAfterYear / 30);
-            const days = remainingDaysAfterYear % 30;
-
-            return `${String(years).padStart(2, '0')}年${String(months).padStart(2, '0')}月${String(days).padStart(2, '0')}日`;
+            return {
+                totalString: formatDuration(totalTimeMs),
+                processedList: list // 回傳原始順序列表
+            };
         }
 
         function renderUI(person, history) {
@@ -563,10 +600,10 @@
             document.getElementById('infoEmail').textContent = person.email || '-';
 
             document.getElementById('infoGenderDob').textContent = `${person.gender || '-'} ${person.dob ? '/ ' + person.dob : ''}`;
-            
+
             // --- 計算並顯示總年資 ---
-            const seniorityString = calculateSeniority(history);
-            document.getElementById('infoSeniority').textContent = seniorityString;
+            const result = processHistory(history);
+            document.getElementById('infoSeniority').textContent = result.totalString;
 
             document.getElementById('infoCertId').textContent = person.certificateId || '-';
 
@@ -574,18 +611,19 @@
             const tbody = document.getElementById('historyTableBody');
             tbody.innerHTML = '';
 
-            // 依照上傳資料順序顯示
-            const displayHistory = history;
+            // 顯示時使用原始順序 (Newest -> Oldest)
+            // 這裡不再進行 reverse，因為我們假設檔案本身就是新到舊
+            const displayHistory = result.processedList;
 
             if (displayHistory.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-gray-400">無顯示執業紀錄</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-gray-400">無顯示執業紀錄</td></tr>`;
             } else {
                 displayHistory.forEach(item => {
                     const tr = document.createElement('tr');
                     // 移除 print:hover:bg-transparent 和 print:border-black，保留一般樣式
                     tr.className = 'border-b border-gray-200 hover:bg-gray-50 group';
 
-                    // BW Style Badge Logic - 保留這些邏輯，因為它們是基於內容的語意化樣式
+                    // BW Style Badge Logic
                     let badgeClass = 'bg-gray-100 text-gray-800 border border-gray-300'; // 預設
 
                     if (item.type.includes('歇業')) {
@@ -607,6 +645,20 @@
                     if (item.startDate !== item.applyDate && item.startDate) {
                         remarksHtml += `<div class="text-xs text-gray-500 italic">生效: ${item.startDate}</div>`;
                     }
+                    // 新增：歇業或目前執業中時顯示本次執業時間
+                    if (item.displayPeriod) {
+                        remarksHtml += `<div class="text-xs mt-1">本次執業: ${item.displayPeriod}</div>`;
+                    }
+                    // 新增：顯示停業時間
+                    if (item.displaySuspensionDuration) {
+                        remarksHtml += `<div class="text-xs mt-1 text-gray-600">本次停業: ${item.displaySuspensionDuration}</div>`;
+                    }
+
+                    // 累積年資欄位
+                    let accumulatedHtml = '-';
+                    if (item.displayAccumulated) {
+                        accumulatedHtml = `<span class="text-gray-900">${item.displayAccumulated}</span>`;
+                    }
 
                     tr.innerHTML = `
                         <td class="py-3 px-2 align-top font-mono text-sm text-gray-900">${item.applyDate}</td>
@@ -615,9 +667,10 @@
                                 ${item.type}
                             </span>
                         </td>
-                        <td class="py-3 px-2 align-top text-sm text-gray-600 font-mono">${item.approvalDoc}</td>
-                        <td class="py-3 px-2 align-top text-sm text-gray-900 font-bold">${item.hospital}</td>
+                        <td class="py-3 px-2 align-top text-sm text-gray-600">${item.approvalDoc}</td>
+                        <td class="py-3 px-2 align-top text-sm text-gray-900">${item.hospital}</td>
                         <td class="py-3 px-2 align-top text-left text-sm space-y-1">${remarksHtml}</td>
+                        <td class="py-3 px-2 align-top text-sm">${accumulatedHtml}</td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -625,7 +678,7 @@
 
             // Re-init icons for the new content
             lucide.createIcons();
-            
+
             // Switch View
             uploadSection.classList.add('hidden');
             resultSection.classList.remove('hidden');
