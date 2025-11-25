@@ -2,9 +2,11 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+**[➡️ 線上體驗 &gt;](https://71658-dev.github.io/Certificate-of-Employment)**
+
 一份專為**新竹市衛生局**設計的**醫事人員年資證明**排版工具，旨在將醫事管理系統匯出的 Excel 或 CSV 檔案，快速轉換為專業、美觀且易於閱讀的證明文件。
 
-本工具最大的特色是**完全在您的瀏覽器本機端運行**，無須安裝任何軟體。您上傳的檔案**不會經過任何網路伺服器**，確保所有敏感的個人資料（PII）都受到最嚴謹的保護。
+本工具最大的特色是**完全在您的瀏覽器本機端運行**，無須安裝任何軟體。您上傳的檔案**不會經過任何網路伺-服器**，確保所有敏感的個人資料（PII）都受到最嚴謹的保護。
 
 ## ✨ 功能特色
 
@@ -22,7 +24,7 @@
 
 *   **HTML5**: 負責結構與內容。
 *   **Tailwind CSS**: 用於快速建構現代化的使用者介面。
-*   **JavaScript (ES6)**: 核心的商業邏輯與互動功能。
+*   **JavaScript (ES6)**: 核心的商業 logique 與互動功能。
 *   **[Lucide Icons](https://lucide.dev/)**: 提供清晰、一致的圖示。
 *   **[SheetJS (xlsx.js)](https://sheetjs.com/)**: 強大的 JavaScript 函式庫，用於解析與處理 Excel 檔案。
 
@@ -30,7 +32,8 @@
 
 操作流程非常簡單：
 
-1.  **開啟工具**：直接在瀏覽器中開啟 `index.html` 檔案。
+1.  **開啟工具**：直接點擊前往 **[線上體驗網址](https://71658-dev.github.io/Certificate-of-Employment)**。
+    *   (若要在本機端離線操作，也可以直接在瀏覽器中開啟 `index.html` 檔案。)
 2.  **上傳檔案**：
     *   點擊「選擇檔案」按鈕，選取從醫事管理系統匯出的醫事人員執業紀錄檔案。
     *   或是，直接將檔案拖曳至上傳區域。
@@ -41,9 +44,7 @@
 
 ## 🖼️ 螢幕截圖
 
-*(此處未來可補上操作介面的螢幕截圖)*
-
-![操作介面示意圖](https://via.placeholder.com/800x500.png?text=未來請在此處補上操作介面截圖)
+![操作介面示意圖](./assets/images/screenshot.png)
 
 ## ⚠️ 已知問題
 
