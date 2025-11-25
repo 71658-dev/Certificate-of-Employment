@@ -235,8 +235,7 @@
                                         <th class="py-3 px-2 font-bold w-32 whitespace-nowrap">申請類別</th>
                                         <th class="py-3 px-2 font-bold w-32">核准文號</th>
                                         <th class="py-3 px-2 font-bold">執業機構名稱</th>
-                                        <th class="py-3 px-2 font-bold text-left w-40">備註</th>
-                                        <th class="py-3 px-2 font-bold w-32">累積年資</th>
+                                        <th class="py-3 px-2 font-bold text-left">備註</th>
                                     </tr>
                                 </thead>
                                 <tbody id="historyTableBody" class="text-gray-800">
@@ -395,6 +394,8 @@
                 let idxHosp = headers.findIndex(h => h.includes('執業機構') || h.includes('服務機構') || h.includes('機構名稱'));
                 if (idxHosp === -1) idxHosp = 7;
                 const idxStartDate = headers.findIndex(h => h.includes('起始日期') || h.includes('執業日期'));
+                // 新增：尋找歇業日期或結束日期欄位
+                const idxEndDate = headers.findIndex(h => h.includes('歇業日期') || h.includes('結束日期'));
 
                 for (let i = tableStartIndex + 1; i < rows.length; i++) {
                     const row = rows[i];
@@ -410,6 +411,8 @@
                     const statusVal = (idxStatus !== -1 && row[idxStatus]) ? cleanText(row[idxStatus]) : '';
                     const hospVal = row[idxHosp] ? cleanText(row[idxHosp]) : '';
                     const startVal = (idxStartDate !== -1 && row[idxStartDate]) ? cleanText(row[idxStartDate]) : dateVal;
+                    // 新增：提取歇業日期
+                    const endVal = (idxEndDate !== -1 && row[idxEndDate]) ? cleanText(row[idxEndDate]) : '';
 
                     if (!personInfo.certificateId && certVal) {
                         personInfo.certificateId = certVal;
@@ -422,6 +425,7 @@
                             approvalDoc: apprVal,
                             hospital: hospVal,
                             startDate: startVal,
+                            endDate: endVal, // 儲存歇業日期
                             status: statusVal
                         });
                     }
@@ -436,7 +440,7 @@
             return String(text).replace(/"/g, '').trim();
         }
 
-        // --- Date Parsing & Seniority Calculation ---
+        // --- Date Parsing & Strict Calendar Calculation ---
 
         // 解析民國年 (e.g., "1120520" or "112/05/20") 為 Date Object
         function parseRocDate(dateStr) {
@@ -463,90 +467,195 @@
             return date;
         }
 
-        function formatDuration(ms) {
-            if (ms <= 0) return "00年00月00日";
-            const totalDays = Math.floor(ms / (1000 * 60 * 60 * 24));
-            const years = Math.floor(totalDays / 365);
-            const remainingDaysAfterYear = totalDays % 365;
-            const months = Math.floor(remainingDaysAfterYear / 30);
-            const days = remainingDaysAfterYear % 30;
-            return `${String(years).padStart(2, '0')}年${String(months).padStart(2, '0')}月${String(days).padStart(2, '0')}日`;
+        // 格式化民國年字串為中文顯示 (例: 1110718 -> 111年07月18日)
+        function formatRocDateString(dateStr) {
+            if (!dateStr) return '';
+            dateStr = String(dateStr).trim();
+            if (dateStr.length < 6) return dateStr;
+
+            let year, month, day;
+            if (dateStr.includes('/')) {
+                const parts = dateStr.split('/');
+                year = parts[0];
+                month = parts[1];
+                day = parts[2];
+            } else {
+                const yearLen = dateStr.length === 7 ? 3 : 2;
+                year = dateStr.substring(0, yearLen);
+                month = dateStr.substring(yearLen, yearLen + 2);
+                day = dateStr.substring(yearLen + 2);
+            }
+            return `${year}年${month}月${day}日`;
+        }
+
+        // 嚴格依據日曆計算兩個日期的差距 {y, m, d}
+        function getStrictDateDiff(startDate, endDate) {
+            let years = endDate.getFullYear() - startDate.getFullYear();
+            let months = endDate.getMonth() - startDate.getMonth();
+            let days = endDate.getDate() - startDate.getDate();
+
+            if (days < 0) {
+                months--;
+                // 借用上個月的天數
+                // 注意：endDate.getMonth() 是當月，我們要找「上個月」有幾天
+                // new Date(year, month, 0) 會回傳該月第0天(即上月最後一天)
+                let prevMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 0);
+                days += prevMonth.getDate();
+            }
+
+            if (months < 0) {
+                years--;
+                months += 12;
+            }
+
+            return { years, months, days };
+        }
+
+        // 加總年資：依據 30天=1月, 12月=1年 進位
+        function addDuration(total, part) {
+            let res = {
+                years: total.years + part.years,
+                months: total.months + part.months,
+                days: total.days + part.days
+            };
+
+            while (res.days >= 30) {
+                res.days -= 30;
+                res.months++;
+            }
+            while (res.months >= 12) {
+                res.months -= 12;
+                res.years++;
+            }
+            return res;
+        }
+
+        // 扣除年資：依據 30天=1月, 12月=1年 借位
+        function subFromTotal(total, deduc) {
+            let res = {
+                years: total.years - deduc.years,
+                months: total.months - deduc.months,
+                days: total.days - deduc.days
+            };
+
+            while (res.days < 0) {
+                res.days += 30;
+                res.months--;
+            }
+            while (res.months < 0) {
+                res.months += 12;
+                res.years--;
+            }
+            return res;
+        }
+
+        function formatDurationObject(d) {
+            if (!d) return "00年00月00日";
+            // 確保非負數 (理論上不應該發生，但做個防護)
+            const y = Math.max(0, d.years);
+            const m = Math.max(0, d.months);
+            const day = Math.max(0, d.days);
+            
+            return `${String(y).padStart(2, '0')}年${String(m).padStart(2, '0')}月${String(day).padStart(2, '0')}日`;
         }
 
         function processHistory(history) {
             // 1. 解析日期，但不排序，保留原始資料順序
-            // 遵照使用者指示，原始資料順序是正確的 (通常是新到舊)
+            // 修改：不再過濾掉 dateObj 為 null 的項目，因為要保留在列表中
             let list = history.map(item => ({
                 ...item,
                 dateObj: parseRocDate(item.applyDate)
-            })).filter(item => item.dateObj !== null);
+            }));
 
-            // 已移除排序邏輯
-            // sorted.sort((a, b) => a.dateObj - b.dateObj); 
-
-            let totalTimeMs = 0;
+            let totalSeniority = { years: 0, months: 0, days: 0 };
 
             // 狀態變數
             let activeStartDate = null; // 目前執業開始日
+            let activeHospital = null; // 目前執業機構
             let suspendStartDate = null; // 目前停業開始日
-            let accumulatedDeduction = 0; // 當次執業期間累積的扣除天數(ms)
+            let accumulatedDeduction = { years: 0, months: 0, days: 0 }; // 當次執業期間累積的扣除 YMD
 
-            // 假設資料為新到舊 (Newest -> Oldest)，為了正確計算時間軸，我們從列表底部 (最舊) 開始遍歷
-            // 因此採用倒序迴圈
+            // 從列表底部 (最舊) 開始遍歷
             for (let i = list.length - 1; i >= 0; i--) {
                 const item = list[i];
                 const currentDate = item.dateObj;
                 const type = item.type;
+                const currentHospital = item.hospital;
 
-                // 預設顯示值初始化
                 item.displayPeriod = null;
                 item.displayAccumulated = null;
-                item.displaySuspensionDuration = null; // 新增：顯示停業時間
+                item.displaySuspensionDuration = null;
+
+                // 新增：若日期無效，則跳過計算，但資料已保留在 list 中會被 render
+                if (!currentDate) {
+                    continue;
+                }
 
                 if (type.includes('執業') && !type.includes('歇業')) {
                     // 開始執業
                     if (!activeStartDate) {
                         activeStartDate = currentDate;
-                        accumulatedDeduction = 0;
+                        activeHospital = currentHospital;
+                        accumulatedDeduction = { years: 0, months: 0, days: 0 };
                         suspendStartDate = null;
                     }
                 } else if (type.includes('歇業')) {
                     // 結束執業
                     if (activeStartDate) {
-                        // 結算這段期間
-                        let duration = currentDate - activeStartDate;
+                        if (currentHospital === activeHospital) {
+                            // 計算這段總長度 (Gross) - 嚴格曆法計算
+                            // 修改：如果歇業日期(endDate)存在，使用歇業日期計算；否則降級使用申請日期(currentDate)
+                            let terminationDate = currentDate;
+                            if (item.endDate) {
+                                const parsedEnd = parseRocDate(item.endDate);
+                                if (parsedEnd) {
+                                    terminationDate = parsedEnd;
+                                }
+                            }
+                            
+                            let gross = getStrictDateDiff(activeStartDate, terminationDate);
 
-                        // 如果還在停業中就歇業了，要扣掉這段停業時間
-                        if (suspendStartDate) {
-                            accumulatedDeduction += (currentDate - suspendStartDate);
-                            suspendStartDate = null;
+                            // 處理未結的停業扣除
+                            if (suspendStartDate) {
+                                let pendingSusp = getStrictDateDiff(suspendStartDate, terminationDate); // 扣除也要對齊結束日期
+                                accumulatedDeduction = addDuration(accumulatedDeduction, pendingSusp);
+                                suspendStartDate = null;
+                            }
+
+                            // 淨年資 = 總長度 - 扣除額
+                            let net = subFromTotal(gross, accumulatedDeduction);
+                            
+                            // 加到總年資
+                            totalSeniority = addDuration(totalSeniority, net);
+
+                            // 紀錄顯示資訊
+                            item.displayPeriod = formatDurationObject(net);
+                            item.displayAccumulated = formatDurationObject(totalSeniority);
+
+                            // 重置
+                            activeStartDate = null;
+                            activeHospital = null;
+                            accumulatedDeduction = { years: 0, months: 0, days: 0 };
                         }
-
-                        const realDuration = Math.max(0, duration - accumulatedDeduction);
-                        totalTimeMs += realDuration;
-
-                        // --- 紀錄顯示資訊 ---
-                        item.displayPeriod = formatDuration(realDuration);
-                        item.displayAccumulated = formatDuration(totalTimeMs);
-
-                        // 重置狀態
-                        activeStartDate = null;
-                        accumulatedDeduction = 0;
                     }
                 } else if (type.includes('停業')) {
                     if (activeStartDate && !suspendStartDate) {
-                        suspendStartDate = currentDate;
+                        if (currentHospital === activeHospital) {
+                            suspendStartDate = currentDate;
+                        }
                     }
                 } else if (type.includes('復業')) {
                     if (suspendStartDate) {
-                        // 計算此次停業時間
-                        const suspensionDuration = currentDate - suspendStartDate;
-                        accumulatedDeduction += suspensionDuration;
+                        if (currentHospital === activeHospital) {
+                            // 計算此次停業時間
+                            let suspDuration = getStrictDateDiff(suspendStartDate, currentDate);
+                            accumulatedDeduction = addDuration(accumulatedDeduction, suspDuration);
 
-                        // 紀錄停業時間供顯示
-                        item.displaySuspensionDuration = formatDuration(suspensionDuration);
-                        
-                        suspendStartDate = null;
+                            // 紀錄顯示
+                            item.displaySuspensionDuration = formatDurationObject(suspDuration);
+                            
+                            suspendStartDate = null;
+                        }
                     }
                 }
             }
@@ -554,32 +663,32 @@
             // 處理最後如果還在執業中 (計算到今天)
             if (activeStartDate) {
                 const now = new Date();
-                let duration = now - activeStartDate;
+                let gross = getStrictDateDiff(activeStartDate, now);
                 
-                let currentSegmentDeduction = accumulatedDeduction;
+                let currentSegmentDeduction = { ...accumulatedDeduction };
                 if (suspendStartDate) {
-                    currentSegmentDeduction += (now - suspendStartDate);
+                    let pendingSusp = getStrictDateDiff(suspendStartDate, now);
+                    currentSegmentDeduction = addDuration(currentSegmentDeduction, pendingSusp);
                 }
                 
-                const realDuration = Math.max(0, duration - currentSegmentDeduction);
-                totalTimeMs += realDuration;
+                let net = subFromTotal(gross, currentSegmentDeduction);
+                totalSeniority = addDuration(totalSeniority, net);
 
-                // 寫入到列表的最上方一筆 (Newest)，因為 list 是保持原順序(Newest -> Oldest)，所以是 index 0
                 if (list.length > 0) {
                     const lastItem = list[0]; 
                     const isTermination = lastItem.type.includes('歇業');
                     const isSuspension = lastItem.type.includes('停業');
                     
                     if (!isTermination && !isSuspension) {
-                        lastItem.displayPeriod = formatDuration(realDuration);
-                        lastItem.displayAccumulated = formatDuration(totalTimeMs);
+                        lastItem.displayPeriod = formatDurationObject(net);
+                        lastItem.displayAccumulated = formatDurationObject(totalSeniority);
                     }
                 }
             }
 
             return {
-                totalString: formatDuration(totalTimeMs),
-                processedList: list // 回傳原始順序列表
+                totalString: formatDurationObject(totalSeniority),
+                processedList: list
             };
         }
 
@@ -645,6 +754,10 @@
                     if (item.startDate !== item.applyDate && item.startDate) {
                         remarksHtml += `<div class="text-xs text-gray-500 italic">生效: ${item.startDate}</div>`;
                     }
+                    // 新增：歇業時顯示歇業日期
+                    if (item.type.includes('歇業') && item.endDate) {
+                         remarksHtml += `<div class="text-xs text-red-600 font-bold mt-1">歇業日期: ${formatRocDateString(item.endDate)}</div>`;
+                    }
                     // 新增：歇業或目前執業中時顯示本次執業時間
                     if (item.displayPeriod) {
                         remarksHtml += `<div class="text-xs mt-1">本次執業: ${item.displayPeriod}</div>`;
@@ -654,10 +767,9 @@
                         remarksHtml += `<div class="text-xs mt-1 text-gray-600">本次停業: ${item.displaySuspensionDuration}</div>`;
                     }
 
-                    // 累積年資欄位
-                    let accumulatedHtml = '-';
+                    // 累積年資欄位 (Moved to Remarks)
                     if (item.displayAccumulated) {
-                        accumulatedHtml = `<span class="text-gray-900">${item.displayAccumulated}</span>`;
+                        remarksHtml += `<div class="text-xs mt-1 text-blue-600 font-bold">累積年資: ${item.displayAccumulated}</div>`;
                     }
 
                     tr.innerHTML = `
@@ -670,7 +782,6 @@
                         <td class="py-3 px-2 align-top text-sm text-gray-600">${item.approvalDoc}</td>
                         <td class="py-3 px-2 align-top text-sm text-gray-900">${item.hospital}</td>
                         <td class="py-3 px-2 align-top text-left text-sm space-y-1">${remarksHtml}</td>
-                        <td class="py-3 px-2 align-top text-sm">${accumulatedHtml}</td>
                     `;
                     tbody.appendChild(tr);
                 });
