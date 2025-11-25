@@ -5,6 +5,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>新竹市醫事人員年資證明排版工具</title>
+    <script>
+        // 攔截並隱藏 Tailwind CSS CDN 的生產環境警告訊息，保持 Console 乾淨
+        (function() {
+            var originalWarn = console.warn;
+            console.warn = function(...args) {
+                if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) {
+                    return;
+                }
+                originalWarn.apply(console, args);
+            };
+        })();
+    </script>
     <script src="./assets/tailwindcss.js"></script>
     <script src="./assets/lucide.js"></script>
     <script src="./assets/xlsx.full.min.js"></script>
